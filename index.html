@@ -11,6 +11,12 @@
         .container { max-width: 900px; }
         .btn-move { transition: all 0.2s ease-in-out; }
         .btn-move:hover { transform: translateY(-3px); box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
+        .modal { backdrop-filter: blur(5px); background-color: rgba(0, 0, 0, 0.6); }
+        .modal-content { animation: fadeInScale 0.3s ease-out forwards; }
+        @keyframes fadeInScale {
+            from { opacity: 0; transform: scale(0.9); }
+            to { opacity: 1; transform: scale(1); }
+        }
     </style>
 </head>
 <body class="bg-[#1a1a2e] text-[#e9e9e9] min-h-screen flex items-center justify-center p-4">
@@ -68,6 +74,16 @@
                     </div>
                 </div>
             </div>
+        </div>
+    </div>
+
+    <!-- Modal for wallet connection -->
+    <div id="wallet-modal" class="modal fixed inset-0 flex items-center justify-center p-4 hidden">
+        <div class="modal-content bg-[#2c2c54] p-8 rounded-xl shadow-2xl w-full max-w-md border border-[#4a4a75] text-center">
+            <h3 class="text-2xl font-bold mb-4 text-[#ffc600]">Connect Wallet</h3>
+            <p class="mb-6 text-gray-300">Please connect your wallet to play the game.</p>
+            <button id="modal-connect-btn" class="px-6 py-3 bg-[#ffc600] text-[#1a1a2e] font-bold rounded-lg hover:bg-yellow-400 transition-colors">Connect</button>
+            <button id="modal-close-btn" class="mt-4 px-6 py-3 bg-red-600 text-white font-bold rounded-lg hover:bg-red-700 transition-colors">Cancel</button>
         </div>
     </div>
 
@@ -291,11 +307,13 @@
                 updateBalanceDisplay(accounts[0]);
                 document.getElementById('game-controls').classList.remove('hidden');
                 document.getElementById('connect-wallet-container').classList.add('hidden');
+                document.getElementById('wallet-modal').classList.add('hidden');
             } else {
                 updateConnectionStatus(false);
                 updateBalanceDisplay(null);
                 document.getElementById('connect-wallet-container').classList.remove('hidden');
                 document.getElementById('game-controls').classList.add('hidden');
+                document.getElementById('wallet-modal').classList.remove('hidden');
                 provider = null;
                 signer = null;
                 contract = null;
@@ -316,7 +334,7 @@
                 logToUI('Connection Failed: Could not connect to wallet. Please try again.');
             }
         };
-        
+
         const handlePlay = async (move) => {
             if (!signer) {
                 logToUI("Wallet Required: Please connect your wallet to play.");
@@ -347,7 +365,14 @@
                     window.location.reload();
                 });
 
-                document.getElementById('connect-wallet-btn').addEventListener('click', connectWallet);
+                document.getElementById('connect-wallet-btn').addEventListener('click', () => {
+                    document.getElementById('wallet-modal').classList.remove('hidden');
+                });
+                document.getElementById('modal-connect-btn').addEventListener('click', connectWallet);
+                document.getElementById('modal-close-btn').addEventListener('click', () => {
+                     document.getElementById('wallet-modal').classList.add('hidden');
+                });
+
                 document.querySelectorAll('.btn-stake').forEach(button => {
                     button.addEventListener('click', (event) => {
                         const stakeInput = document.getElementById('stake-input');
