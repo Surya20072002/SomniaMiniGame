@@ -399,11 +399,29 @@
             }
             
             provider = new ethers.providers.Web3Provider(window.ethereum);
-            contract = new ethers.Contract(contractAddress, contractABI, provider);
             
-            window.ethereum.on('accountsChanged', updateWalletUI);
+            window.ethereum.on('accountsChanged', async (accounts) => {
+                 if (accounts.length > 0) {
+                    signer = provider.getSigner();
+                    contract = new ethers.Contract(contractAddress, contractABI, signer);
+                    await updateWalletUI();
+                } else {
+                    walletAddressEl.textContent = '...';
+                    walletBalanceEl.textContent = '0.000 STT';
+                    connectWalletBtn.textContent = 'Connect Wallet';
+                    connectWalletBtn.disabled = false;
+                    connectWalletBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+                    bettingInterface.classList.add('hidden');
+                    gameArea.classList.add('hidden');
+                }
+            });
             window.ethereum.on('chainChanged', () => window.location.reload());
-
+            
+            const accounts = await window.ethereum.request({ method: 'eth_accounts' });
+            if(accounts.length > 0) {
+                signer = provider.getSigner();
+                contract = new ethers.Contract(contractAddress, contractABI, signer);
+            }
             await updateWalletUI();
         });
     </script>
