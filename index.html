@@ -393,17 +393,13 @@
                     contract = new ethers.Contract(contractAddress, contractABI, provider);
                     contract.on("GamePlayed", (player, playerMove, nukeMove, winner, winnings) => {
                         let resultBody = "";
-                        let resultColor = "";
 
                         if (winner == 1) {
                             resultBody = `<b>Result: You Won!</b><br>You played <b>${moveMap[playerMove]}</b>. The Random Draw played <b>${moveMap[nukeMove]}</b>. You received ${ethers.utils.formatEther(winnings)} STT.`;
-                            resultColor = "text-green-400";
                         } else if (winner == 2) {
                             resultBody = `<b>Result: You Lost.</b><br>You played <b>${moveMap[playerMove]}</b>. The Random Draw played <b>${moveMap[nukeMove]}</b>. Better luck next time.`;
-                            resultColor = "text-red-500";
                         } else {
                             resultBody = `<b>Result: It's a Draw.</b><br>You played <b>${moveMap[playerMove]}</b>. The Random Draw also played <b>${moveMap[nukeMove]}</b>. Your stake has been returned.`;
-                            resultColor = "text-yellow-400";
                         }
                         
                         appendLog(resultBody);
