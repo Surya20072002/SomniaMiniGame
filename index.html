@@ -3,89 +3,90 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>On-Chain Rock-Paper-Scissors</title>
+    <title>Somnia RPS Game</title>
+    <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Ethers.js for Web3 interaction -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/5.7.2/ethers.umd.min.js"></script>
     <style>
-        body { font-family: 'Inter', sans-serif; background-color: #1a1a2e; color: #e9e9e9; }
-        .container { max-width: 1000px; }
-        .btn-move { transition: all 0.2s ease-in-out; }
-        .btn-move:hover { transform: translateY(-3px); box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #1a1a2e;
+            color: #e9e9e9;
+        }
+        .bet-btn.active {
+            background-color: #22c55e;
+            border-color: #22c55e;
+            color: white;
+        }
     </style>
 </head>
-<body class="bg-[#1a1a2e] text-[#e9e9e9] min-h-screen flex flex-col items-center justify-center p-4">
+<body class="bg-gray-900 text-white flex items-center justify-center min-h-screen p-4">
 
-    <!-- Header and Balance Section -->
-    <div class="container mx-auto p-6 bg-[#2c2c54] rounded-xl shadow-lg border border-[#4a4a75] mb-8">
-        <h1 class="text-4xl font-bold text-center text-[#ffc600] mb-2">Rock-Paper-Scissors</h1>
-        <p class="text-center text-gray-300 mb-6">Play against the chain and see if you can win!</p>
+    <!-- Main Container -->
+    <div class="bg-gray-800 p-8 rounded-3xl shadow-2xl max-w-xl w-full">
         
-        <div class="flex flex-col md:flex-row items-center justify-between bg-[#3d3d6b] p-4 rounded-lg">
-            <div id="status-display" class="flex items-center space-x-2">
-                <span id="connection-status-icon" class="h-4 w-4 bg-red-500 rounded-full"></span>
-                <span id="connection-status-text" class="text-sm">Disconnected</span>
+        <!-- Header -->
+        <h1 class="text-4xl font-bold text-center mb-6 text-green-400">Somnia Rock, Paper, Scissors</h1>
+        
+        <!-- Wallet & Betting Info -->
+        <div class="space-y-4 mb-8">
+            <div id="wallet-info" class="bg-gray-700 p-5 rounded-xl shadow-inner">
+                <h2 class="text-2xl font-semibold mb-3 text-green-400">Wallet Info</h2>
+                <div class="flex flex-col sm:flex-row justify-between text-sm mb-2">
+                    <p><strong>Network:</strong> Somnia Testnet</p>
+                    <p><strong>Symbol:</strong> STT</p>
+                </div>
+                <p><strong>Address:</strong> <span id="wallet-address" class="font-mono text-sm break-all">...</span></p>
+                <p class="mt-2 text-xl"><strong>Balance:</strong> <span id="wallet-balance" class="font-bold text-green-300">0.000 STT</span></p>
+                <div id="connect-wallet-container" class="mt-4">
+                    <button id="connect-wallet-btn" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg transition-colors">
+                        Connect Wallet
+                    </button>
+                </div>
             </div>
-            <div id="balance-info" class="flex flex-col items-center md:items-end mt-4 md:mt-0 space-y-1">
-                <p id="account-display" class="text-sm text-gray-400 truncate">Wallet: Not Connected</p>
-                <p id="wallet-balance-display" class="text-sm text-gray-400">Your Balance: 0 STT</p>
-                <p id="contract-balance-display" class="text-sm text-gray-400">Contract Balance: 0 STT</p>
+
+            <div id="betting-interface" class="bg-gray-700 p-5 rounded-xl shadow-inner hidden">
+                <h2 class="text-2xl font-semibold mb-3 text-green-400">Place a Bet</h2>
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
+                    <!-- Fixed bet buttons -->
+                    <button data-bet="0.001" class="bet-btn bg-gray-600 hover:bg-gray-500 text-white font-bold py-2 rounded-lg transition-colors">0.001 STT</button>
+                    <button data-bet="0.01" class="bet-btn bg-gray-600 hover:bg-gray-500 text-white font-bold py-2 rounded-lg transition-colors">0.01 STT</button>
+                    <button data-bet="0.05" class="bet-btn bg-gray-600 hover:bg-gray-500 text-white font-bold py-2 rounded-lg transition-colors">0.05 STT</button>
+                    <button data-bet="1" class="bet-btn bg-gray-600 hover:bg-gray-500 text-white font-bold py-2 rounded-lg transition-colors">1 STT</button>
+                </div>
+                
+                <!-- Custom bet input -->
+                <div class="flex items-center space-x-2">
+                    <input type="number" id="custom-bet-input" placeholder="Custom Bet" min="0.001" step="0.001" class="w-full bg-gray-900 text-white px-4 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-400 border border-gray-600">
+                    <span class="text-sm">STT</span>
+                </div>
             </div>
         </div>
-    </div>
 
-    <!-- Main Game Interface -->
-    <div class="container mx-auto p-6 bg-[#2c2c54] rounded-xl shadow-lg border border-[#4a4a75]">
-        <div class="flex flex-col md:flex-row space-y-8 md:space-y-0 md:space-x-8">
-
-            <!-- Left Side: Player Betting Controls -->
-            <div id="player-betting" class="flex-1 space-y-6">
-                <h2 class="text-2xl font-semibold text-[#ffc600]">Your Bet</h2>
-
-                <div id="connect-wallet-container" class="bg-[#3d3d6b] p-6 rounded-lg text-center">
-                    <h3 class="text-xl font-semibold mb-4">Connect Your Wallet to Play</h3>
-                    <button id="connect-wallet-btn" class="w-full px-6 py-3 bg-[#ffc600] text-[#1a1a2e] font-bold rounded-lg hover:bg-yellow-400 transition-colors">Connect Wallet</button>
-                </div>
-
-                <div id="game-controls" class="hidden">
-                    <div class="space-y-4">
-                        <div>
-                            <label class="block mb-2 text-sm text-gray-400">Choose a stake amount:</label>
-                            <div class="flex flex-wrap gap-2">
-                                <button class="btn-stake px-4 py-2 bg-[#4a4a75] rounded-lg hover:bg-[#5c5c8a] transition-colors" data-value="0.01">0.01 STT</button>
-                                <button class="btn-stake px-4 py-2 bg-[#4a4a75] rounded-lg hover:bg-[#5c5c8a] transition-colors" data-value="0.05">0.05 STT</button>
-                                <button class="btn-stake px-4 py-2 bg-[#4a4a75] rounded-lg hover:bg-[#5c5c8a] transition-colors" data-value="0.1">0.1 STT</button>
-                                <button class="btn-stake px-4 py-2 bg-[#4a4a75] rounded-lg hover:bg-[#5c5c8a] transition-colors" data-value="1">1 STT</button>
-                                <button class="btn-stake px-4 py-2 bg-[#4a4a75] rounded-lg hover:bg-[#5c5c8a] transition-colors" data-value="10">10 STT</button>
-                            </div>
-                        </div>
-                        <div class="flex items-center space-x-4">
-                            <input type="number" id="stake-input" placeholder="Or enter custom stake" class="flex-1 p-3 rounded-lg bg-[#4a4a75] border border-[#5c5c8a] text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#ffc600]">
-                        </div>
-                    </div>
-
-                    <div class="mt-8">
-                        <label class="block mb-2 text-sm text-gray-400">Choose your move:</label>
-                        <div id="move-options" class="flex justify-around space-x-4">
-                            <button data-move="0" class="btn-move p-4 bg-[#4a4a75] rounded-xl text-4xl hover:bg-[#5c5c8a]">✊</button>
-                            <button data-move="1" class="btn-move p-4 bg-[#4a4a75] rounded-xl text-4xl hover:bg-[#5c5c8a]">✋</button>
-                            <button data-move="2" class="btn-move p-4 bg-[#4a4a75] rounded-xl text-4xl hover:bg-[#5c5c8a]">✌️</button>
-                        </div>
-                    </div>
-                </div>
+        <!-- Game Area -->
+        <div id="game-area" class="bg-gray-700 p-5 rounded-xl shadow-inner text-center hidden">
+            <h2 class="text-2xl font-semibold mb-3 text-green-400">Make Your Choice</h2>
+            <div class="flex justify-center items-center space-x-6">
+                <button data-move="0" class="choice-btn text-6xl hover:scale-110 transform transition-transform" data-choice="rock">🪨</button>
+                <button data-move="1" class="choice-btn text-6xl hover:scale-110 transform transition-transform" data-choice="paper">📄</button>
+                <button data-move="2" class="choice-btn text-6xl hover:scale-110 transform transition-transform" data-choice="scissors">✂️</button>
             </div>
-
-            <!-- Right Side: Game Result and Log -->
-            <div class="flex-1 space-y-6 mt-8 md:mt-0 p-6 bg-[#3d3d6b] rounded-lg">
-                <h2 class="text-2xl font-semibold text-[#ffc600]">Game Log</h2>
-                <div id="game-log" class="space-y-4">
-                    <p class="text-gray-400 text-center">Your game results will appear here.</p>
-                </div>
-            </div>
-
         </div>
+
+        <!-- Result Section -->
+        <div id="result-interface" class="mt-8 bg-gray-700 p-5 rounded-xl shadow-inner hidden">
+            <h2 class="text-2xl font-semibold mb-4 text-green-400">Game Result</h2>
+            <div id="result-display" class="space-y-2">
+                <!-- Result message will be injected here -->
+            </div>
+            <button id="play-again-btn" class="mt-6 w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-lg transition-colors">Play Again</button>
+        </div>
+
     </div>
-    
-    <script type="text/javascript">
+
+    <script>
         const contractABI = [
             {
                 "inputs": [],
@@ -250,170 +251,198 @@
                 "type": "function"
             }
         ];
-
+        
         const contractAddress = "0x245726E7AA5A5BDdf26DA2CAC3FC3911419477b9";
 
         let provider, signer, contract;
         let selectedStake = 0;
-        let moveMap = ["Rock ✊", "Paper ✋", "Scissors ✌️"];
+        const moveMap = ["Rock 🪨", "Paper 📄", "Scissors ✂️"];
 
-        const appendLog = (message, isError = false) => {
-            const logContainer = document.getElementById('game-log');
-            const newLog = document.createElement('p');
-            newLog.className = `text-sm ${isError ? 'text-red-500' : 'text-gray-300'}`;
-            newLog.innerHTML = message;
-            logContainer.prepend(newLog);
-            if (logContainer.children.length > 5) {
-                logContainer.removeChild(logContainer.lastChild);
-            }
-        };
+        // State variables
+        let walletConnected = false;
+        let currentBet = 0;
 
-        const updateConnectionStatus = (isConnected) => {
-            const statusIcon = document.getElementById('connection-status-icon');
-            const statusText = document.getElementById('connection-status-text');
-            if (isConnected) {
-                statusIcon.classList.remove('bg-red-500');
-                statusIcon.classList.add('bg-green-500');
-                statusText.innerText = 'Connected';
-            } else {
-                statusIcon.classList.remove('bg-green-500');
-                statusIcon.classList.add('bg-red-500');
-                statusText.innerText = 'Disconnected';
-            }
-        };
-
-        const updateBalanceDisplay = async (address) => {
-            try {
-                if (address) {
-                    const balance = await provider.getBalance(address);
-                    document.getElementById('account-display').innerText = `Wallet: ${address.substring(0, 6)}...${address.substring(address.length - 4)}`;
-                    document.getElementById('wallet-balance-display').innerText = `Your Balance: ${ethers.utils.formatEther(balance)} STT`;
-                } else {
-                    document.getElementById('account-display').innerText = 'Wallet: Not Connected';
-                    document.getElementById('wallet-balance-display').innerText = 'Your Balance: 0 STT';
-                }
-                if (contract) {
-                    const contractBalance = await contract.getContractBalance();
-                    document.getElementById('contract-balance-display').innerText = `Contract Balance: ${ethers.utils.formatEther(contractBalance)} STT`;
-                }
-            } catch (error) {
-                console.error("Error updating balances:", error);
-            }
-        };
-
-        const handleConnected = async (accounts) => {
-             if (accounts.length > 0) {
-                provider = new ethers.providers.Web3Provider(window.ethereum);
-                signer = provider.getSigner();
-                contract = new ethers.Contract(contractAddress, contractABI, signer);
-                updateConnectionStatus(true);
-                updateBalanceDisplay(accounts[0]);
-                document.getElementById('game-controls').classList.remove('hidden');
-                document.getElementById('connect-wallet-container').classList.add('hidden');
-            } else {
-                updateConnectionStatus(false);
-                updateBalanceDisplay(null);
-                document.getElementById('connect-wallet-container').classList.remove('hidden');
-                document.getElementById('game-controls').classList.add('hidden');
-                provider = null;
-                signer = null;
-                contract = null;
-            }
-        };
-
-        const connectWallet = async () => {
-             if (typeof window.ethereum === 'undefined') {
-                appendLog('Wallet Not Found: Please install a Web3 wallet like MetaMask to play this game.', true);
-                return;
-            }
-
-            try {
-                const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
-                handleConnected(accounts);
-            } catch (error) {
-                console.error("User denied account access or other error:", error);
-                appendLog('Connection Failed: Could not connect to wallet. Please try again.', true);
-            }
-        };
+        // DOM elements
+        const walletAddressEl = document.getElementById('wallet-address');
+        const walletBalanceEl = document.getElementById('wallet-balance');
+        const connectWalletBtn = document.getElementById('connect-wallet-btn');
+        const bettingInterface = document.getElementById('betting-interface');
+        const gameArea = document.getElementById('game-area');
+        const betButtons = document.querySelectorAll('.bet-btn');
+        const customBetInput = document.getElementById('custom-bet-input');
+        const choiceButtons = document.querySelectorAll('.choice-btn');
+        const resultInterface = document.getElementById('result-interface');
+        const resultDisplay = document.getElementById('result-display');
+        const playAgainBtn = document.getElementById('play-again-btn');
         
-        const handlePlay = async (move) => {
-            if (!signer) {
-                appendLog("Wallet Required: Please connect your wallet to play.", true);
+        // --- Utility functions ---
+        function updateWalletUI(address, balance) {
+            walletAddressEl.textContent = address ? `${address.substring(0, 6)}...${address.substring(address.length - 4)}` : '...';
+            walletBalanceEl.textContent = `${parseFloat(balance).toFixed(3)} STT`;
+            
+            const isConnected = !!address;
+            walletConnected = isConnected;
+            
+            connectWalletBtn.textContent = isConnected ? 'Wallet Connected' : 'Connect Wallet';
+            connectWalletBtn.disabled = isConnected;
+            connectWalletBtn.classList.toggle('opacity-50', isConnected);
+            connectWalletBtn.classList.toggle('cursor-not-allowed', isConnected);
+            bettingInterface.classList.toggle('hidden', !isConnected);
+        }
+
+        // --- Game logic functions ---
+        async function playGame(playerMove) {
+            if (currentBet <= 0) {
+                console.error("Please place a valid bet first.");
                 return;
             }
 
-            const stake = document.getElementById('stake-input').value || selectedStake;
-            if (stake <= 0) {
-                appendLog("Invalid Stake: Please enter a valid stake amount.", true);
+            try {
+                const stakeWei = ethers.utils.parseEther(currentBet.toString());
+                console.log(`Sending transaction with a stake of ${currentBet} STT.`);
+                
+                const tx = await contract.playGame(playerMove, { value: stakeWei });
+                console.log(`Transaction sent: ${tx.hash}`);
+
+                // Wait for the transaction to be mined
+                const receipt = await tx.wait();
+                console.log("Transaction confirmed:", receipt);
+
+                // Use the event to get the game result
+                const event = receipt.events.find(e => e.event === 'GamePlayed');
+                if (event) {
+                    const [player, playerChoice, nukeMove, winner, winnings] = event.args;
+                    let resultMessage = '';
+                    if (winner.toNumber() === 1) { // Player wins
+                        resultMessage = `<p class="text-green-300 text-xl font-bold">You Win!</p>`;
+                    } else if (winner.toNumber() === 2) { // Computer wins
+                        resultMessage = `<p class="text-red-400 text-xl font-bold">You Lose!</p>`;
+                    } else { // Draw
+                        resultMessage = `<p class="text-yellow-300 text-xl font-bold">It's a Draw!</p>`;
+                    }
+                    
+                    resultDisplay.innerHTML = `
+                        ${resultMessage}
+                        <p>You chose: <span class="font-bold">${moveMap[playerChoice.toNumber()]}</span></p>
+                        <p>Random Draw was: <span class="font-bold">${moveMap[nukeMove.toNumber()]}</span></p>
+                        <p class="text-lg mt-2">Winnings: <span class="font-bold text-green-300">${ethers.utils.formatEther(winnings)} STT</span></p>
+                    `;
+                    resultInterface.classList.remove('hidden');
+                    gameArea.classList.add('hidden');
+                    updateWalletBalance();
+                }
+
+            } catch (error) {
+                console.error("Error playing game:", error);
+                // Handle specific errors for a better user experience
+                if (error.code === 4001) {
+                    console.error("User denied the transaction.");
+                } else if (error.message.includes("insufficient funds")) {
+                    console.error("Transaction failed: Insufficient funds in your wallet for gas and stake.");
+                } else {
+                    console.error("Transaction Failed: Could not play the game. Check your wallet and the network status.");
+                }
+            }
+        }
+        
+        async function updateWalletBalance() {
+             if (window.ethereum && walletConnected) {
+                const accounts = await window.ethereum.request({ method: 'eth_accounts' });
+                if (accounts.length > 0) {
+                    const address = accounts[0];
+                    const balance = await provider.getBalance(address);
+                    walletBalanceEl.textContent = `${ethers.utils.formatEther(balance)} STT`;
+                }
+            }
+        }
+        
+        async function init() {
+            if (typeof window.ethereum === 'undefined') {
+                console.error('Wallet Not Found: Please install a Web3 wallet like MetaMask.');
                 return;
             }
             
-            appendLog(`Playing Game... you chose ${moveMap[move]} with a stake of ${stake} STT.`);
-
-            try {
-                const stakeWei = ethers.utils.parseEther(stake.toString());
-                const tx = await contract.playGame(move, { value: stakeWei });
-                appendLog(`Transaction sent: ${tx.hash}`);
-                await tx.wait();
-            } catch (error) {
-                console.error("Error playing game:", error);
-                appendLog("Transaction Failed: Could not play the game. Check your wallet and the network status.", true);
-            }
-        };
-        
-        document.addEventListener('DOMContentLoaded', async () => {
-            if (typeof window.ethereum !== 'undefined') {
-                window.ethereum.on('accountsChanged', handleConnected);
-                window.ethereum.on('chainChanged', (chainId) => {
-                    window.location.reload();
-                });
-
-                document.getElementById('connect-wallet-btn').addEventListener('click', connectWallet);
-                document.querySelectorAll('.btn-stake').forEach(button => {
-                    button.addEventListener('click', (event) => {
-                        const stakeInput = document.getElementById('stake-input');
-                        document.querySelectorAll('.btn-stake').forEach(b => b.classList.remove('bg-yellow-400'));
-                        event.target.classList.add('bg-yellow-400');
-                        selectedStake = parseFloat(event.target.dataset.value);
-                        stakeInput.value = selectedStake;
-                    });
-                });
-                document.getElementById('move-options').addEventListener('click', (event) => {
-                    if (event.target.closest('button')) {
-                        const move = event.target.closest('button').dataset.move;
-                        handlePlay(move);
-                    }
-                });
-
-                const accounts = await window.ethereum.request({ method: 'eth_accounts' });
-                handleConnected(accounts);
-
-                if (contractAddress !== "0x...YOUR_CONTRACT_ADDRESS...") {
-                    provider = new ethers.providers.Web3Provider(window.ethereum);
-                    contract = new ethers.Contract(contractAddress, contractABI, provider);
-                    contract.on("GamePlayed", (player, playerMove, nukeMove, winner, winnings) => {
-                        let resultBody = "";
-
-                        if (winner == 1) {
-                            resultBody = `<b>Result: You Won!</b><br>You played <b>${moveMap[playerMove]}</b>. The Random Draw played <b>${moveMap[nukeMove]}</b>. You received ${ethers.utils.formatEther(winnings)} STT.`;
-                        } else if (winner == 2) {
-                            resultBody = `<b>Result: You Lost.</b><br>You played <b>${moveMap[playerMove]}</b>. The Random Draw played <b>${moveMap[nukeMove]}</b>. Better luck next time.`;
-                        } else {
-                            resultBody = `<b>Result: It's a Draw.</b><br>You played <b>${moveMap[playerMove]}</b>. The Random Draw also played <b>${moveMap[nukeMove]}</b>. Your stake has been returned.`;
-                        }
-                        
-                        appendLog(resultBody);
-                        
-                        if (provider && signer) {
-                            signer.getAddress().then(address => updateBalanceDisplay(address));
-                        }
-                    });
+            provider = new ethers.providers.Web3Provider(window.ethereum);
+            contract = new ethers.Contract(contractAddress, contractABI, provider);
+            
+            // Event listeners for wallet
+            window.ethereum.on('accountsChanged', (accounts) => {
+                const address = accounts.length > 0 ? accounts[0] : null;
+                updateWalletUI(address, 0); // Reset balance for new address
+                if (address) {
+                    updateWalletBalance();
+                    bettingInterface.classList.remove('hidden');
+                    gameArea.classList.remove('hidden');
+                } else {
+                     bettingInterface.classList.add('hidden');
+                     gameArea.classList.add('hidden');
                 }
-            } else {
-                updateConnectionStatus(false);
-                document.getElementById('connect-wallet-container').innerHTML = `<h2 class="text-xl font-semibold mb-4 text-red-500">Wallet Not Found</h2><p class="text-gray-300">Please install a Web3 wallet like MetaMask to play this game.</p>`;
+            });
+            window.ethereum.on('chainChanged', () => window.location.reload());
+            
+            // Check for initial connection
+            const accounts = await window.ethereum.request({ method: 'eth_accounts' });
+            if (accounts.length > 0) {
+                updateWalletUI(accounts[0], 0);
+                updateWalletBalance();
+                signer = provider.getSigner();
+                contract = new ethers.Contract(contractAddress, contractABI, signer);
+                bettingInterface.classList.remove('hidden');
+                gameArea.classList.remove('hidden');
+            }
+        }
+        
+        // --- Event Listeners for UI ---
+        connectWalletBtn.addEventListener('click', async () => {
+            try {
+                const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+                if (accounts.length > 0) {
+                    updateWalletUI(accounts[0], 0);
+                    updateWalletBalance();
+                    signer = provider.getSigner();
+                    contract = new ethers.Contract(contractAddress, contractABI, signer);
+                }
+            } catch (error) {
+                console.error("User denied wallet connection or an error occurred.");
             }
         });
+        
+        betButtons.forEach(btn => {
+            btn.addEventListener('click', () => {
+                betButtons.forEach(b => b.classList.remove('active', 'bg-green-600', 'hover:bg-green-700'));
+                btn.classList.add('active', 'bg-green-600', 'hover:bg-green-700');
+                currentBet = parseFloat(btn.dataset.bet);
+                customBetInput.value = '';
+            });
+        });
+        
+        customBetInput.addEventListener('input', () => {
+            betButtons.forEach(b => b.classList.remove('active', 'bg-green-600', 'hover:bg-green-700'));
+            currentBet = parseFloat(customBetInput.value) || 0;
+        });
+
+        choiceButtons.forEach(btn => {
+            btn.addEventListener('click', () => {
+                if (currentBet > 0) {
+                    playGame(parseInt(btn.dataset.move));
+                } else {
+                    console.error("Please place a valid bet first.");
+                }
+            });
+        });
+
+        playAgainBtn.addEventListener('click', () => {
+            currentBet = 0;
+            betButtons.forEach(btn => btn.classList.remove('active', 'bg-green-600', 'hover:bg-green-700'));
+            customBetInput.value = '';
+            resultInterface.classList.add('hidden');
+            gameArea.classList.remove('hidden');
+            bettingInterface.classList.remove('hidden');
+        });
+        
+        // --- Initialization ---
+        document.addEventListener('DOMContentLoaded', init);
     </script>
+
 </body>
 </html>
