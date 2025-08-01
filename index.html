@@ -90,13 +90,6 @@
         const contractABI = [
             {
                 "inputs": [],
-                "name": "fund",
-                "outputs": [],
-                "stateMutability": "payable",
-                "type": "function"
-            },
-            {
-                "inputs": [],
                 "stateMutability": "nonpayable",
                 "type": "constructor"
             },
@@ -179,6 +172,39 @@
                 "type": "event"
             },
             {
+                "inputs": [],
+                "name": "fund",
+                "outputs": [],
+                "stateMutability": "payable",
+                "type": "function"
+            },
+            {
+                "inputs": [],
+                "name": "getContractBalance",
+                "outputs": [
+                    {
+                        "internalType": "uint256",
+                        "name": "",
+                        "type": "uint256"
+                    }
+                ],
+                "stateMutability": "view",
+                "type": "function"
+            },
+            {
+                "inputs": [],
+                "name": "owner",
+                "outputs": [
+                    {
+                        "internalType": "address",
+                        "name": "",
+                        "type": "address"
+                    }
+                ],
+                "stateMutability": "view",
+                "type": "function"
+            },
+            {
                 "inputs": [
                     {
                         "internalType": "uint256",
@@ -223,36 +249,10 @@
                 "outputs": [],
                 "stateMutability": "nonpayable",
                 "type": "function"
-            },
-            {
-                "inputs": [],
-                "name": "getContractBalance",
-                "outputs": [
-                    {
-                        "internalType": "uint256",
-                        "name": "",
-                        "type": "uint256"
-                    }
-                ],
-                "stateMutability": "view",
-                "type": "function"
-            },
-            {
-                "inputs": [],
-                "name": "owner",
-                "outputs": [
-                    {
-                        "internalType": "address",
-                        "name": "",
-                        "type": "address"
-                    }
-                ],
-                "stateMutability": "view",
-                "type": "function"
             }
         ];
         
-        const contractAddress = "0x245726E7AA5A5BDdf26DA2CAC3FC3911419477b9";
+        const contractAddress = "0x271e6B75288F05d1334f59Bf418d6f54d193dC0F";
 
         let provider, signer, contract;
         let selectedStake = 0;
@@ -276,21 +276,25 @@
         const playAgainBtn = document.getElementById('play-again-btn');
         
         // --- Utility functions ---
-        function updateWalletUI(address, balance) {
-            walletAddressEl.textContent = address ? `${address.substring(0, 6)}...${address.substring(address.length - 4)}` : '...';
-            walletBalanceEl.textContent = `${parseFloat(balance).toFixed(3)} STT`;
-            
-            const isConnected = !!address;
-            walletConnected = isConnected;
-            
-            connectWalletBtn.textContent = isConnected ? 'Wallet Connected' : 'Connect Wallet';
-            connectWalletBtn.disabled = isConnected;
-            connectWalletBtn.classList.toggle('opacity-50', isConnected);
-            connectWalletBtn.classList.toggle('cursor-not-allowed', isConnected);
-            bettingInterface.classList.toggle('hidden', !isConnected);
+        async function updateWalletUI() {
+            if (window.ethereum) {
+                const accounts = await window.ethereum.request({ method: 'eth_accounts' });
+                if (accounts.length > 0) {
+                    const address = accounts[0];
+                    const balance = await provider.getBalance(address);
+                    walletAddressEl.textContent = `${address.substring(0, 6)}...${address.substring(address.length - 4)}`;
+                    walletBalanceEl.textContent = `${ethers.utils.formatEther(balance)} STT`;
+                    
+                    connectWalletBtn.textContent = 'Wallet Connected';
+                    connectWalletBtn.disabled = true;
+                    connectWalletBtn.classList.add('opacity-50', 'cursor-not-allowed');
+                    
+                    bettingInterface.classList.remove('hidden');
+                    gameArea.classList.remove('hidden');
+                }
+            }
         }
-
-        // --- Game logic functions ---
+        
         async function playGame(playerMove) {
             if (currentBet <= 0) {
                 console.error("Please place a valid bet first.");
@@ -302,22 +306,23 @@
                 console.log(`Sending transaction with a stake of ${currentBet} STT.`);
                 
                 const tx = await contract.playGame(playerMove, { value: stakeWei });
-                console.log(`Transaction sent: ${tx.hash}`);
+                
+                // Show loading state
+                resultDisplay.innerHTML = `<p class="text-xl text-yellow-300">Awaiting transaction confirmation...</p>`;
+                resultInterface.classList.remove('hidden');
+                gameArea.classList.add('hidden');
 
-                // Wait for the transaction to be mined
                 const receipt = await tx.wait();
-                console.log("Transaction confirmed:", receipt);
-
-                // Use the event to get the game result
+                
                 const event = receipt.events.find(e => e.event === 'GamePlayed');
                 if (event) {
                     const [player, playerChoice, nukeMove, winner, winnings] = event.args;
                     let resultMessage = '';
-                    if (winner.toNumber() === 1) { // Player wins
+                    if (winner.toNumber() === 1) {
                         resultMessage = `<p class="text-green-300 text-xl font-bold">You Win!</p>`;
-                    } else if (winner.toNumber() === 2) { // Computer wins
+                    } else if (winner.toNumber() === 2) {
                         resultMessage = `<p class="text-red-400 text-xl font-bold">You Lose!</p>`;
-                    } else { // Draw
+                    } else {
                         resultMessage = `<p class="text-yellow-300 text-xl font-bold">It's a Draw!</p>`;
                     }
                     
@@ -329,79 +334,25 @@
                     `;
                     resultInterface.classList.remove('hidden');
                     gameArea.classList.add('hidden');
-                    updateWalletBalance();
+                    updateWalletUI();
                 }
 
             } catch (error) {
                 console.error("Error playing game:", error);
-                // Handle specific errors for a better user experience
-                if (error.code === 4001) {
-                    console.error("User denied the transaction.");
-                } else if (error.message.includes("insufficient funds")) {
-                    console.error("Transaction failed: Insufficient funds in your wallet for gas and stake.");
-                } else {
-                    console.error("Transaction Failed: Could not play the game. Check your wallet and the network status.");
-                }
-            }
-        }
-        
-        async function updateWalletBalance() {
-             if (window.ethereum && walletConnected) {
-                const accounts = await window.ethereum.request({ method: 'eth_accounts' });
-                if (accounts.length > 0) {
-                    const address = accounts[0];
-                    const balance = await provider.getBalance(address);
-                    walletBalanceEl.textContent = `${ethers.utils.formatEther(balance)} STT`;
-                }
-            }
-        }
-        
-        async function init() {
-            if (typeof window.ethereum === 'undefined') {
-                console.error('Wallet Not Found: Please install a Web3 wallet like MetaMask.');
-                return;
-            }
-            
-            provider = new ethers.providers.Web3Provider(window.ethereum);
-            contract = new ethers.Contract(contractAddress, contractABI, provider);
-            
-            // Event listeners for wallet
-            window.ethereum.on('accountsChanged', (accounts) => {
-                const address = accounts.length > 0 ? accounts[0] : null;
-                updateWalletUI(address, 0); // Reset balance for new address
-                if (address) {
-                    updateWalletBalance();
-                    bettingInterface.classList.remove('hidden');
-                    gameArea.classList.remove('hidden');
-                } else {
-                     bettingInterface.classList.add('hidden');
-                     gameArea.classList.add('hidden');
-                }
-            });
-            window.ethereum.on('chainChanged', () => window.location.reload());
-            
-            // Check for initial connection
-            const accounts = await window.ethereum.request({ method: 'eth_accounts' });
-            if (accounts.length > 0) {
-                updateWalletUI(accounts[0], 0);
-                updateWalletBalance();
-                signer = provider.getSigner();
-                contract = new ethers.Contract(contractAddress, contractABI, signer);
-                bettingInterface.classList.remove('hidden');
-                gameArea.classList.remove('hidden');
+                resultDisplay.innerHTML = `<p class="text-xl text-red-400 font-bold">Transaction Failed</p><p class="mt-2 text-sm text-gray-300">${error.message}</p>`;
+                resultInterface.classList.remove('hidden');
+                gameArea.classList.add('hidden');
             }
         }
         
         // --- Event Listeners for UI ---
         connectWalletBtn.addEventListener('click', async () => {
             try {
-                const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
-                if (accounts.length > 0) {
-                    updateWalletUI(accounts[0], 0);
-                    updateWalletBalance();
-                    signer = provider.getSigner();
-                    contract = new ethers.Contract(contractAddress, contractABI, signer);
-                }
+                await window.ethereum.request({ method: 'eth_requestAccounts' });
+                const provider = new ethers.providers.Web3Provider(window.ethereum);
+                const signer = provider.getSigner();
+                contract = new ethers.Contract(contractAddress, contractABI, signer);
+                await updateWalletUI();
             } catch (error) {
                 console.error("User denied wallet connection or an error occurred.");
             }
@@ -441,8 +392,20 @@
         });
         
         // --- Initialization ---
-        document.addEventListener('DOMContentLoaded', init);
-    </script>
+        document.addEventListener('DOMContentLoaded', async () => {
+             if (typeof window.ethereum === 'undefined') {
+                console.error('Wallet Not Found: Please install a Web3 wallet like MetaMask.');
+                return;
+            }
+            
+            provider = new ethers.providers.Web3Provider(window.ethereum);
+            contract = new ethers.Contract(contractAddress, contractABI, provider);
+            
+            window.ethereum.on('accountsChanged', updateWalletUI);
+            window.ethereum.on('chainChanged', () => window.location.reload());
 
+            await updateWalletUI();
+        });
+    </script>
 </body>
 </html>
