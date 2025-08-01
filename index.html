@@ -8,83 +8,84 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/5.7.2/ethers.umd.min.js"></script>
     <style>
         body { font-family: 'Inter', sans-serif; background-color: #1a1a2e; color: #e9e9e9; }
-        .container { max-width: 900px; }
+        .container { max-width: 1000px; }
         .btn-move { transition: all 0.2s ease-in-out; }
         .btn-move:hover { transform: translateY(-3px); box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
-        .modal { backdrop-filter: blur(5px); background-color: rgba(0, 0, 0, 0.6); }
-        .modal-content { animation: fadeInScale 0.3s ease-out forwards; }
-        @keyframes fadeInScale {
-            from { opacity: 0; transform: transform: scale(0.9); }
-            to { opacity: 1; transform: scale(1); }
-        }
     </style>
 </head>
-<body class="bg-[#1a1a2e] text-[#e9e9e9] min-h-screen flex items-center justify-center p-4">
+<body class="bg-[#1a1a2e] text-[#e9e9e9] min-h-screen flex flex-col items-center justify-center p-4">
 
-    <!-- Main Game Container -->
-    <div class="container mx-auto p-8 bg-[#2c2c54] rounded-xl shadow-lg border border-[#4a4a75]">
-        <h1 class="text-4xl font-bold text-center text-[#ffc600] mb-6">Rock-Paper-Scissors</h1>
-        <p class="text-center text-gray-300 mb-8">Play against a random draw on the Somnia Network! The winner takes all.</p>
-
-        <!-- Player Info and Network Status -->
-        <div class="flex flex-col md:flex-row items-center justify-between mb-8 bg-[#3d3d6b] p-4 rounded-lg">
+    <!-- Header and Balance Section -->
+    <div class="container mx-auto p-6 bg-[#2c2c54] rounded-xl shadow-lg border border-[#4a4a75] mb-8">
+        <h1 class="text-4xl font-bold text-center text-[#ffc600] mb-2">Rock-Paper-Scissors</h1>
+        <p class="text-center text-gray-300 mb-6">Play against the chain and see if you can win!</p>
+        
+        <div class="flex flex-col md:flex-row items-center justify-between bg-[#3d3d6b] p-4 rounded-lg">
             <div id="status-display" class="flex items-center space-x-2">
                 <span id="connection-status-icon" class="h-4 w-4 bg-red-500 rounded-full"></span>
                 <span id="connection-status-text" class="text-sm">Disconnected</span>
             </div>
-            <div id="balance-info" class="mt-4 md:mt-0">
+            <div id="balance-info" class="flex flex-col items-center md:items-end mt-4 md:mt-0 space-y-1">
                 <p id="account-display" class="text-sm text-gray-400 truncate">Wallet: Not Connected</p>
                 <p id="wallet-balance-display" class="text-sm text-gray-400">Your Balance: 0 STT</p>
                 <p id="contract-balance-display" class="text-sm text-gray-400">Contract Balance: 0 STT</p>
             </div>
         </div>
-
-        <!-- Game Interface -->
-        <div id="game-container" class="space-y-8">
-            <div id="connect-wallet-container" class="bg-[#3d3d6b] p-6 rounded-lg text-center">
-                <h2 class="text-2xl font-semibold mb-4 text-[#ffc600]">Connect Your Wallet</h2>
-                <button id="connect-wallet-btn" class="w-full px-6 py-3 bg-[#ffc600] text-[#1a1a2e] font-bold rounded-lg hover:bg-yellow-400 transition-colors">Connect Wallet</button>
-            </div>
-
-            <!-- Game Section -->
-            <div id="game-controls" class="bg-[#3d3d6b] p-6 rounded-lg hidden">
-                <h2 class="text-2xl font-semibold mb-4 text-[#ffc600]">Choose your move and stake</h2>
-                <div class="space-y-4">
-                    <div>
-                        <label class="block mb-2 text-sm text-gray-400">Choose a stake amount:</label>
-                        <div class="flex flex-wrap gap-2">
-                            <button class="btn-stake px-4 py-2 bg-[#4a4a75] rounded-lg hover:bg-[#5c5c8a] transition-colors" data-value="0.01">0.01 STT</button>
-                            <button class="btn-stake px-4 py-2 bg-[#4a4a75] rounded-lg hover:bg-[#5c5c8a] transition-colors" data-value="0.05">0.05 STT</button>
-                            <button class="btn-stake px-4 py-2 bg-[#4a4a75] rounded-lg hover:bg-[#5c5c8a] transition-colors" data-value="0.1">0.1 STT</button>
-                            <button class="btn-stake px-4 py-2 bg-[#4a4a75] rounded-lg hover:bg-[#5c5c8a] transition-colors" data-value="1">1 STT</button>
-                            <button class="btn-stake px-4 py-2 bg-[#4a4a75] rounded-lg hover:bg-[#5c5c8a] transition-colors" data-value="10">10 STT</button>
-                        </div>
-                    </div>
-                    <div class="flex items-center space-x-4">
-                        <input type="number" id="stake-input" placeholder="Or enter custom stake" class="flex-1 p-3 rounded-lg bg-[#4a4a75] border border-[#5c5c8a] text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#ffc600]">
-                    </div>
-                </div>
-
-                <div class="mt-8">
-                    <label class="block mb-2 text-sm text-gray-400">Choose your move:</label>
-                    <div id="move-options" class="flex justify-around space-x-4">
-                        <button data-move="0" class="btn-move p-4 bg-[#4a4a75] rounded-xl text-4xl hover:bg-[#5c5c8a]">✊</button>
-                        <button data-move="1" class="btn-move p-4 bg-[#4a4a75] rounded-xl text-4xl hover:bg-[#5c5c8a]">✋</button>
-                        <button data-move="2" class="btn-move p-4 bg-[#4a4a75] rounded-xl text-4xl hover:bg-[#5c5c8a]">✌️</button>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Game Result Display -->
-            <div id="game-result-container" class="bg-[#3d3d6b] p-6 rounded-lg text-center hidden">
-                <h3 id="result-title" class="text-2xl font-bold mb-4"></h3>
-                <p id="result-body" class="text-gray-300"></p>
-            </div>
-        </div>
     </div>
 
+    <!-- Main Game Interface -->
+    <div class="container mx-auto p-6 bg-[#2c2c54] rounded-xl shadow-lg border border-[#4a4a75]">
+        <div class="flex flex-col md:flex-row space-y-8 md:space-y-0 md:space-x-8">
+
+            <!-- Left Side: Player Betting Controls -->
+            <div id="player-betting" class="flex-1 space-y-6">
+                <h2 class="text-2xl font-semibold text-[#ffc600]">Your Bet</h2>
+
+                <div id="connect-wallet-container" class="bg-[#3d3d6b] p-6 rounded-lg text-center">
+                    <h3 class="text-xl font-semibold mb-4">Connect Your Wallet to Play</h3>
+                    <button id="connect-wallet-btn" class="w-full px-6 py-3 bg-[#ffc600] text-[#1a1a2e] font-bold rounded-lg hover:bg-yellow-400 transition-colors">Connect Wallet</button>
+                </div>
+
+                <div id="game-controls" class="hidden">
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block mb-2 text-sm text-gray-400">Choose a stake amount:</label>
+                            <div class="flex flex-wrap gap-2">
+                                <button class="btn-stake px-4 py-2 bg-[#4a4a75] rounded-lg hover:bg-[#5c5c8a] transition-colors" data-value="0.01">0.01 STT</button>
+                                <button class="btn-stake px-4 py-2 bg-[#4a4a75] rounded-lg hover:bg-[#5c5c8a] transition-colors" data-value="0.05">0.05 STT</button>
+                                <button class="btn-stake px-4 py-2 bg-[#4a4a75] rounded-lg hover:bg-[#5c5c8a] transition-colors" data-value="0.1">0.1 STT</button>
+                                <button class="btn-stake px-4 py-2 bg-[#4a4a75] rounded-lg hover:bg-[#5c5c8a] transition-colors" data-value="1">1 STT</button>
+                                <button class="btn-stake px-4 py-2 bg-[#4a4a75] rounded-lg hover:bg-[#5c5c8a] transition-colors" data-value="10">10 STT</button>
+                            </div>
+                        </div>
+                        <div class="flex items-center space-x-4">
+                            <input type="number" id="stake-input" placeholder="Or enter custom stake" class="flex-1 p-3 rounded-lg bg-[#4a4a75] border border-[#5c5c8a] text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#ffc600]">
+                        </div>
+                    </div>
+
+                    <div class="mt-8">
+                        <label class="block mb-2 text-sm text-gray-400">Choose your move:</label>
+                        <div id="move-options" class="flex justify-around space-x-4">
+                            <button data-move="0" class="btn-move p-4 bg-[#4a4a75] rounded-xl text-4xl hover:bg-[#5c5c8a]">✊</button>
+                            <button data-move="1" class="btn-move p-4 bg-[#4a4a75] rounded-xl text-4xl hover:bg-[#5c5c8a]">✋</button>
+                            <button data-move="2" class="btn-move p-4 bg-[#4a4a75] rounded-xl text-4xl hover:bg-[#5c5c8a]">✌️</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Side: Game Result and Log -->
+            <div class="flex-1 space-y-6 mt-8 md:mt-0 p-6 bg-[#3d3d6b] rounded-lg">
+                <h2 class="text-2xl font-semibold text-[#ffc600]">Game Log</h2>
+                <div id="game-log" class="space-y-4">
+                    <p class="text-gray-400 text-center">Your game results will appear here.</p>
+                </div>
+            </div>
+
+        </div>
+    </div>
+    
     <script type="text/javascript">
-        // Smart Contract ABI and Address
         const contractABI = [
             {
                 "inputs": [],
@@ -256,18 +257,17 @@
         let selectedStake = 0;
         let moveMap = ["Rock ✊", "Paper ✋", "Scissors ✌️"];
 
-        // Utility functions for UI
-        const showResult = (title, body, color) => {
-            const resultContainer = document.getElementById('game-result-container');
-            const resultTitle = document.getElementById('result-title');
-            const resultBody = document.getElementById('result-body');
-
-            resultTitle.innerText = title;
-            resultBody.innerHTML = body;
-            resultTitle.className = `text-2xl font-bold mb-4 ${color}`;
-            resultContainer.classList.remove('hidden');
+        const appendLog = (message, isError = false) => {
+            const logContainer = document.getElementById('game-log');
+            const newLog = document.createElement('p');
+            newLog.className = `text-sm ${isError ? 'text-red-500' : 'text-gray-300'}`;
+            newLog.innerHTML = message;
+            logContainer.prepend(newLog);
+            if (logContainer.children.length > 5) {
+                logContainer.removeChild(logContainer.lastChild);
+            }
         };
-        
+
         const updateConnectionStatus = (isConnected) => {
             const statusIcon = document.getElementById('connection-status-icon');
             const statusText = document.getElementById('connection-status-text');
@@ -319,11 +319,11 @@
                 signer = null;
                 contract = null;
             }
-        }
+        };
 
         const connectWallet = async () => {
              if (typeof window.ethereum === 'undefined') {
-                console.error('Wallet Not Found: Please install a Web3 wallet like MetaMask to play this game.');
+                appendLog('Wallet Not Found: Please install a Web3 wallet like MetaMask to play this game.', true);
                 return;
             }
 
@@ -332,30 +332,32 @@
                 handleConnected(accounts);
             } catch (error) {
                 console.error("User denied account access or other error:", error);
+                appendLog('Connection Failed: Could not connect to wallet. Please try again.', true);
             }
         };
         
         const handlePlay = async (move) => {
             if (!signer) {
-                console.error("Wallet Required: Please connect your wallet to play.");
+                appendLog("Wallet Required: Please connect your wallet to play.", true);
                 return;
             }
 
             const stake = document.getElementById('stake-input').value || selectedStake;
             if (stake <= 0) {
-                console.error("Invalid Stake: Please enter a valid stake amount.");
+                appendLog("Invalid Stake: Please enter a valid stake amount.", true);
                 return;
             }
-
-            document.getElementById('game-result-container').classList.add('hidden');
+            
+            appendLog(`Playing Game... you chose ${moveMap[move]} with a stake of ${stake} STT.`);
 
             try {
                 const stakeWei = ethers.utils.parseEther(stake.toString());
                 const tx = await contract.playGame(move, { value: stakeWei });
-                console.log(`Playing Game... Transaction sent: ${tx.hash}`);
+                appendLog(`Transaction sent: ${tx.hash}`);
                 await tx.wait();
             } catch (error) {
                 console.error("Error playing game:", error);
+                appendLog("Transaction Failed: Could not play the game. Check your wallet and the network status.", true);
             }
         };
         
@@ -390,25 +392,21 @@
                     provider = new ethers.providers.Web3Provider(window.ethereum);
                     contract = new ethers.Contract(contractAddress, contractABI, provider);
                     contract.on("GamePlayed", (player, playerMove, nukeMove, winner, winnings) => {
-                        let resultTitle = "";
                         let resultBody = "";
                         let resultColor = "";
 
                         if (winner == 1) {
-                            resultTitle = "You Win!";
-                            resultBody = `You played <b>${moveMap[playerMove]}</b>. The Random Draw played <b>${moveMap[nukeMove]}</b>. You received ${ethers.utils.formatEther(winnings)} STT.`;
+                            resultBody = `<b>Result: You Won!</b><br>You played <b>${moveMap[playerMove]}</b>. The Random Draw played <b>${moveMap[nukeMove]}</b>. You received ${ethers.utils.formatEther(winnings)} STT.`;
                             resultColor = "text-green-400";
                         } else if (winner == 2) {
-                            resultTitle = "You Lose";
-                            resultBody = `You played <b>${moveMap[playerMove]}</b>. The Random Draw played <b>${moveMap[nukeMove]}</b>. Better luck next time.`;
+                            resultBody = `<b>Result: You Lost.</b><br>You played <b>${moveMap[playerMove]}</b>. The Random Draw played <b>${moveMap[nukeMove]}</b>. Better luck next time.`;
                             resultColor = "text-red-500";
                         } else {
-                            resultTitle = "It's a Draw";
-                            resultBody = `You played <b>${moveMap[playerMove]}</b>. The Random Draw also played <b>${moveMap[nukeMove]}</b>. Your stake has been returned.`;
+                            resultBody = `<b>Result: It's a Draw.</b><br>You played <b>${moveMap[playerMove]}</b>. The Random Draw also played <b>${moveMap[nukeMove]}</b>. Your stake has been returned.`;
                             resultColor = "text-yellow-400";
                         }
                         
-                        showResult(resultTitle, resultBody, resultColor);
+                        appendLog(resultBody);
                         
                         if (provider && signer) {
                             signer.getAddress().then(address => updateBalanceDisplay(address));
