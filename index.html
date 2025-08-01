@@ -77,13 +77,12 @@
         </div>
     </div>
 
-    <!-- Modal for wallet connection -->
-    <div id="wallet-modal" class="modal fixed inset-0 flex items-center justify-center p-4 hidden">
+    <!-- Modal for displaying messages -->
+    <div id="result-modal" class="modal fixed inset-0 flex items-center justify-center p-4 hidden">
         <div class="modal-content bg-[#2c2c54] p-8 rounded-xl shadow-2xl w-full max-w-md border border-[#4a4a75] text-center">
-            <h3 class="text-2xl font-bold mb-4 text-[#ffc600]">Connect Wallet</h3>
-            <p class="mb-6 text-gray-300">Please connect your wallet to play the game.</p>
-            <button id="modal-connect-btn" class="px-6 py-3 bg-[#ffc600] text-[#1a1a2e] font-bold rounded-lg hover:bg-yellow-400 transition-colors">Connect</button>
-            <button id="modal-close-btn" class="mt-4 px-6 py-3 bg-red-600 text-white font-bold rounded-lg hover:bg-red-700 transition-colors">Cancel</button>
+            <h3 id="result-modal-title" class="text-2xl font-bold mb-4 text-[#ffc600]">Game Result</h3>
+            <p id="result-modal-body" class="mb-6 text-gray-300"></p>
+            <button id="result-modal-close" class="px-6 py-3 bg-[#ffc600] text-[#1a1a2e] font-bold rounded-lg hover:bg-yellow-400 transition-colors">Close</button>
         </div>
     </div>
 
@@ -261,8 +260,14 @@
         let moveMap = ["Rock ✊", "Paper ✋", "Scissors ✌️"];
 
         // Utility functions for UI
-        const logToUI = (message) => {
-            console.log(message);
+        const showResultModal = (title, body) => {
+            document.getElementById('result-modal-title').innerText = title;
+            document.getElementById('result-modal-body').innerText = body;
+            document.getElementById('result-modal').classList.remove('hidden');
+        };
+
+        const hideResultModal = () => {
+            document.getElementById('result-modal').classList.add('hidden');
         };
 
         const updateConnectionStatus = (isConnected) => {
@@ -322,7 +327,7 @@
 
         const connectWallet = async () => {
              if (typeof window.ethereum === 'undefined') {
-                logToUI('Wallet Not Found: Please install a Web3 wallet like MetaMask to play this game.');
+                showResultModal('Wallet Not Found', 'Please install a Web3 wallet like MetaMask to play this game.');
                 return;
             }
 
@@ -331,30 +336,30 @@
                 handleConnected(accounts);
             } catch (error) {
                 console.error("User denied account access or other error:", error);
-                logToUI('Connection Failed: Could not connect to wallet. Please try again.');
+                showResultModal('Connection Failed', 'Could not connect to wallet. Please try again.');
             }
         };
 
         const handlePlay = async (move) => {
             if (!signer) {
-                logToUI("Wallet Required: Please connect your wallet to play.");
+                showResultModal("Wallet Required", "Please connect your wallet to play.");
                 return;
             }
 
             const stake = document.getElementById('stake-input').value || selectedStake;
             if (stake <= 0) {
-                logToUI("Invalid Stake: Please enter a valid stake amount.");
+                showResultModal("Invalid Stake", "Please enter a valid stake amount.");
                 return;
             }
 
             try {
                 const stakeWei = ethers.utils.parseEther(stake.toString());
                 const tx = await contract.playGame(move, { value: stakeWei });
-                logToUI("Playing Game... Transaction sent:", tx.hash);
+                showResultModal('Playing Game', `Transaction sent. Awaiting result. Transaction Hash: ${tx.hash}`);
                 await tx.wait();
             } catch (error) {
                 console.error("Error playing game:", error);
-                logToUI("Transaction Failed: Could not play the game. Check your wallet and the network status.");
+                showResultModal('Transaction Failed', 'Could not play the game. Check your wallet and the network status.');
             }
         };
         
@@ -372,6 +377,7 @@
                 document.getElementById('modal-close-btn').addEventListener('click', () => {
                      document.getElementById('wallet-modal').classList.add('hidden');
                 });
+                document.getElementById('result-modal-close').addEventListener('click', hideResultModal);
 
                 document.querySelectorAll('.btn-stake').forEach(button => {
                     button.addEventListener('click', (event) => {
@@ -399,13 +405,16 @@
                         console.log("Game result received.");
                         let resultText;
                         if (winner == 1) {
-                            resultText = `You played ${moveMap[playerMove]}, Random Draw played ${moveMap[nukeMove]}. You win! You received ${ethers.utils.formatEther(winnings)} STT.`;
+                            resultText = `You played **${moveMap[playerMove]}**. The Random Draw played **${moveMap[nukeMove]}**. You win! You received ${ethers.utils.formatEther(winnings)} STT.`;
+                            showResultModal("You Win!", resultText);
                         } else if (winner == 2) {
-                            resultText = `You played ${moveMap[playerMove]}, Random Draw played ${moveMap[nukeMove]}. Random Draw wins! Better luck next time.`;
+                            resultText = `You played **${moveMap[playerMove]}**. The Random Draw played **${moveMap[nukeMove]}**. The Random Draw wins! Better luck next time.`;
+                            showResultModal("You Lose", resultText);
                         } else {
-                            resultText = `You played ${moveMap[playerMove]}, Random Draw played ${moveMap[nukeMove]}. It's a draw! Your stake has been returned.`;
+                            resultText = `You played **${moveMap[playerMove]}**. The Random Draw also played **${moveMap[nukeMove]}**. It's a draw! Your stake has been returned.`;
+                            showResultModal("It's a Draw", resultText);
                         }
-                        logToUI(resultText);
+                        
                         if (provider && signer) {
                             signer.getAddress().then(address => updateBalanceDisplay(address));
                         }
