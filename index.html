@@ -74,15 +74,12 @@
                     </div>
                 </div>
             </div>
-        </div>
-    </div>
 
-    <!-- Modal for displaying messages -->
-    <div id="result-modal" class="modal fixed inset-0 flex items-center justify-center p-4 hidden">
-        <div class="modal-content bg-[#2c2c54] p-8 rounded-xl shadow-2xl w-full max-w-md border border-[#4a4a75] text-center">
-            <h3 id="result-modal-title" class="text-2xl font-bold mb-4 text-[#ffc600]">Game Result</h3>
-            <p id="result-modal-body" class="mb-6 text-gray-300"></p>
-            <button id="result-modal-close" class="px-6 py-3 bg-[#ffc600] text-[#1a1a2e] font-bold rounded-lg hover:bg-yellow-400 transition-colors">Close</button>
+            <!-- Game Result Display -->
+            <div id="game-result-container" class="bg-[#3d3d6b] p-6 rounded-lg text-center hidden">
+                <h3 id="result-title" class="text-2xl font-bold mb-4"></h3>
+                <p id="result-body" class="text-gray-300"></p>
+            </div>
         </div>
     </div>
 
@@ -260,16 +257,17 @@
         let moveMap = ["Rock ✊", "Paper ✋", "Scissors ✌️"];
 
         // Utility functions for UI
-        const showResultModal = (title, body) => {
-            document.getElementById('result-modal-title').innerText = title;
-            document.getElementById('result-modal-body').innerText = body;
-            document.getElementById('result-modal').classList.remove('hidden');
-        };
+        const showResult = (title, body, color) => {
+            const resultContainer = document.getElementById('game-result-container');
+            const resultTitle = document.getElementById('result-title');
+            const resultBody = document.getElementById('result-body');
 
-        const hideResultModal = () => {
-            document.getElementById('result-modal').classList.add('hidden');
+            resultTitle.innerText = title;
+            resultBody.innerHTML = body;
+            resultTitle.className = `text-2xl font-bold mb-4 ${color}`;
+            resultContainer.classList.remove('hidden');
         };
-
+        
         const updateConnectionStatus = (isConnected) => {
             const statusIcon = document.getElementById('connection-status-icon');
             const statusText = document.getElementById('connection-status-text');
@@ -312,13 +310,11 @@
                 updateBalanceDisplay(accounts[0]);
                 document.getElementById('game-controls').classList.remove('hidden');
                 document.getElementById('connect-wallet-container').classList.add('hidden');
-                document.getElementById('wallet-modal').classList.add('hidden');
             } else {
                 updateConnectionStatus(false);
                 updateBalanceDisplay(null);
                 document.getElementById('connect-wallet-container').classList.remove('hidden');
                 document.getElementById('game-controls').classList.add('hidden');
-                document.getElementById('wallet-modal').classList.remove('hidden');
                 provider = null;
                 signer = null;
                 contract = null;
@@ -327,7 +323,7 @@
 
         const connectWallet = async () => {
              if (typeof window.ethereum === 'undefined') {
-                showResultModal('Wallet Not Found', 'Please install a Web3 wallet like MetaMask to play this game.');
+                console.error('Wallet Not Found: Please install a Web3 wallet like MetaMask to play this game.');
                 return;
             }
 
@@ -336,30 +332,30 @@
                 handleConnected(accounts);
             } catch (error) {
                 console.error("User denied account access or other error:", error);
-                showResultModal('Connection Failed', 'Could not connect to wallet. Please try again.');
             }
         };
-
+        
         const handlePlay = async (move) => {
             if (!signer) {
-                showResultModal("Wallet Required", "Please connect your wallet to play.");
+                console.error("Wallet Required: Please connect your wallet to play.");
                 return;
             }
 
             const stake = document.getElementById('stake-input').value || selectedStake;
             if (stake <= 0) {
-                showResultModal("Invalid Stake", "Please enter a valid stake amount.");
+                console.error("Invalid Stake: Please enter a valid stake amount.");
                 return;
             }
+
+            document.getElementById('game-result-container').classList.add('hidden');
 
             try {
                 const stakeWei = ethers.utils.parseEther(stake.toString());
                 const tx = await contract.playGame(move, { value: stakeWei });
-                showResultModal('Playing Game', `Transaction sent. Awaiting result. Transaction Hash: ${tx.hash}`);
+                console.log(`Playing Game... Transaction sent: ${tx.hash}`);
                 await tx.wait();
             } catch (error) {
                 console.error("Error playing game:", error);
-                showResultModal('Transaction Failed', 'Could not play the game. Check your wallet and the network status.');
             }
         };
         
@@ -370,15 +366,7 @@
                     window.location.reload();
                 });
 
-                document.getElementById('connect-wallet-btn').addEventListener('click', () => {
-                    document.getElementById('wallet-modal').classList.remove('hidden');
-                });
-                document.getElementById('modal-connect-btn').addEventListener('click', connectWallet);
-                document.getElementById('modal-close-btn').addEventListener('click', () => {
-                     document.getElementById('wallet-modal').classList.add('hidden');
-                });
-                document.getElementById('result-modal-close').addEventListener('click', hideResultModal);
-
+                document.getElementById('connect-wallet-btn').addEventListener('click', connectWallet);
                 document.querySelectorAll('.btn-stake').forEach(button => {
                     button.addEventListener('click', (event) => {
                         const stakeInput = document.getElementById('stake-input');
@@ -402,18 +390,25 @@
                     provider = new ethers.providers.Web3Provider(window.ethereum);
                     contract = new ethers.Contract(contractAddress, contractABI, provider);
                     contract.on("GamePlayed", (player, playerMove, nukeMove, winner, winnings) => {
-                        console.log("Game result received.");
-                        let resultText;
+                        let resultTitle = "";
+                        let resultBody = "";
+                        let resultColor = "";
+
                         if (winner == 1) {
-                            resultText = `You played **${moveMap[playerMove]}**. The Random Draw played **${moveMap[nukeMove]}**. You win! You received ${ethers.utils.formatEther(winnings)} STT.`;
-                            showResultModal("You Win!", resultText);
+                            resultTitle = "You Win!";
+                            resultBody = `You played <b>${moveMap[playerMove]}</b>. The Random Draw played <b>${moveMap[nukeMove]}</b>. You received ${ethers.utils.formatEther(winnings)} STT.`;
+                            resultColor = "text-green-400";
                         } else if (winner == 2) {
-                            resultText = `You played **${moveMap[playerMove]}**. The Random Draw played **${moveMap[nukeMove]}**. The Random Draw wins! Better luck next time.`;
-                            showResultModal("You Lose", resultText);
+                            resultTitle = "You Lose";
+                            resultBody = `You played <b>${moveMap[playerMove]}</b>. The Random Draw played <b>${moveMap[nukeMove]}</b>. Better luck next time.`;
+                            resultColor = "text-red-500";
                         } else {
-                            resultText = `You played **${moveMap[playerMove]}**. The Random Draw also played **${moveMap[nukeMove]}**. It's a draw! Your stake has been returned.`;
-                            showResultModal("It's a Draw", resultText);
+                            resultTitle = "It's a Draw";
+                            resultBody = `You played <b>${moveMap[playerMove]}</b>. The Random Draw also played <b>${moveMap[nukeMove]}</b>. Your stake has been returned.`;
+                            resultColor = "text-yellow-400";
                         }
+                        
+                        showResult(resultTitle, resultBody, resultColor);
                         
                         if (provider && signer) {
                             signer.getAddress().then(address => updateBalanceDisplay(address));
